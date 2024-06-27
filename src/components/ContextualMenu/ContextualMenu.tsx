@@ -2,7 +2,7 @@ import classNames from "classnames";
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { HTMLProps } from "react";
 import usePortal from "react-useportal";
-
+import "./ContextualMenu.scss"
 import { useListener, usePrevious } from "hooks";
 import Button from "../Button";
 import type { ButtonProps } from "../Button";
@@ -105,6 +105,11 @@ export type Props<L> = PropsWithSpread<
      * Whether the menu should be visible.
      */
     visible?: boolean;
+    /**
+     * Whether the menu should appear below or above the Menu Context Button.
+     */    
+    adjustVerticalHeight?: boolean;
+    // onClick?: () => void | null;
   },
   HTMLProps<HTMLSpanElement>
 >;
@@ -174,6 +179,7 @@ const ContextualMenu = <L,>({
   hasToggleIcon,
   links,
   onToggleMenu,
+  adjustVerticalHeight = true,
   position = "right",
   positionNode,
   scrollOverflow,
@@ -184,12 +190,14 @@ const ContextualMenu = <L,>({
   toggleLabelFirst = true,
   toggleProps,
   visible = false,
+  onClick,
   ...wrapperProps
 }: Props<L>): JSX.Element => {
   const id = useId();
   const wrapper = useRef<HTMLDivElement | null>(null);
   const [positionCoords, setPositionCoords] = useState<DOMRect>();
   const [adjustedPosition, setAdjustedPosition] = useState(position);
+  const [displayAbove, setDisplayAbove] = useState(false);
   const hasToggle = hasToggleIcon || toggleLabel;
 
   useEffect(() => {
@@ -245,6 +253,21 @@ const ContextualMenu = <L,>({
     [updatePositionCoords]
   );
 
+  const adjustDisplayPosition: React.MouseEventHandler<HTMLSpanElement> = (e) => {
+    if(adjustVerticalHeight){
+      const menu = wrapper.current;
+      if (!menu) {
+        return;
+      }
+  
+      const menuPosition = menu.getBoundingClientRect().top;
+      const showMenuAbove = menuPosition > window.innerHeight / 1.5;
+      setDisplayAbove(showMenuAbove);
+    }
+
+    onClick(e);
+  };
+
   // Handle controlling updates to the menu visibility from outside
   // the component.
   useEffect(() => {
@@ -294,6 +317,7 @@ const ContextualMenu = <L,>({
     <span
       className={contextualMenuClassName}
       ref={wrapperRef}
+      onClick={adjustDisplayPosition}
       {...wrapperProps}
     >
       {hasToggle ? (
@@ -340,7 +364,7 @@ const ContextualMenu = <L,>({
             autoAdjust={autoAdjust}
             handleClose={closePortal}
             constrainPanelWidth={constrainPanelWidth}
-            dropdownClassName={dropdownClassName}
+            dropdownClassName={classNames(dropdownClassName, { "show-menu-above": displayAbove })}
             dropdownContent={children}
             id={id}
             isOpen={isOpen}
